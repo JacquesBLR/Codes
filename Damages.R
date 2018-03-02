@@ -8,19 +8,18 @@ library(lubridate)
 library(plyr)
 
 
-setwd("/Users/jacquesaguilera/GDrive/Ensae/Scolarite_Ensae/Cases Hypothetical damages/Damages")
+setwd("C:/Users/Bertrand/Documents/Competition_Policy_Cases")
 
 
 # Import des données
-Bicilandia <- read_excel("Damages.xlsx",
+Bicilandia <- read_excel("Damages.xls",
            sheet="Bicilandia")
 Bicilandia$Month = ymd(Bicilandia$Month)
 
-Flandria <- read_excel("Damages.xlsx",
+Flandria <- read_excel("Damages.xls",
            sheet="Flandria")
-Flandria$Month = ymd(Flandria$Month)
-
-
+Flandria$Month <- ymd(Flandria$Month)
+  
 #######################################################
 ##### Dif In Dif 1 avec Cross-Sectional : Speicher ####
 #######################################################
@@ -51,7 +50,7 @@ Speicher$Cartel = 0
 BicilandiaDataModel1 = rbind(Cartel,Speicher)
 
 # Modèle Dif In Dif avec groupe de contrôle Before-After : Avant et Après VS Periode de collusion et Cross-sectional  : Speicher
-DifInDif1 <- lm(Price ~ Cost + collusion * Cartel, data = BicilandiaDataModel1)
+DifInDif1 <- lm(Price ~ Cost + collusion + Cartel + collusion * Cartel , data = BicilandiaDataModel1)
 summary.lm(DifInDif1)
 
 #######################################################
@@ -83,5 +82,5 @@ Cartel$Bicilinda = 1
 BicilandiaDataModel2 = rbind(Cartel,CartelFL)
 
 # Modèle Dif In Dif avec groupe de contrôle Before-After : Avant et Après VS Periode de collusion et Cross-sectional  : Speicher
-DifInDif2 <- lm(Price ~ Cost + collusion * Bicilinda, data = BicilandiaDataModel2)
+DifInDif2 <- lm(Price ~ Cost + collusion + Bicilinda + collusion * Bicilinda, data = BicilandiaDataModel2)
 summary.lm(DifInDif2)
