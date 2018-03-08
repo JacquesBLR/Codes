@@ -56,11 +56,7 @@ logitSpeicher <- Bicilandia[,c("Month","ln_Speicher_Share","Speicher_Price","Spe
 colnames(logitSpeicher) <- c("Month","ln_Share","Price","Cost","Share","Volume","Total_Volume")
 logitSpeicher$BindaGuerraQuality <- 0
 
-## On filtre sur la période sans collusion
-logitm <- rbind(logitBinda,logitGuerra,logitSpeicher)
-logitm <- subset(logitm, Month < ymd("2006-12-01"))
-logitm <- subset(logitm, Month > ymd("2005-01-01"))
-##
+
 ##
 library(AER)
 modelelogit <- ivreg(ln_Share ~ Price | Cost , data = logitm)
@@ -74,31 +70,39 @@ mu <- -(modelelogit$coefficients[[2]])
 logitm$simulated_Cost <- logitm$Price - 1 - exp(logitm$ln_Share)
 ##
 ## Les coûts simulés ne sont pas inintéressants, mais guère utiles dans le cas présent.
-## On passe dans une phase "Cournot"
+## On passe dans une phase de construction d'un contrefactuel "Cournot" sur la période de collusion.
+
+####################################################################
+## Construction de la fonction permettant d'inverser une fonction ##
 inverse <- function(f,y) {
   fonction_racine <- function(x) {
     return(f(x)-y)
   }
   return(uniroot(fonction_racine,c(0.01,12))$root[1])
 }
-exponentielle <- function(x) {
-  return(exp(x))
-}
-
+############
 ## On récupère maintenant les données observées sur la période de collusion
-## On filtre sur la période sans collusion
+## On filtre sur la période avec collusion
 logitm <- rbind(logitBinda,logitGuerra,logitSpeicher)
 logitm <- subset(logitm, Month < ymd("2012-01-01"))
-logitm <- subset(logitm, Month > ymd("2007-12-01"))
+logitm <- subset(logitm, Month > ymd("2006-12-01"))
 ##
+library(AER)
 modelelogit <- ivreg(ln_Share ~ Price | Cost , data = logitm)
+summary(modelelogit)
 ## Construction du modèle contrefactuel
-contrefactual <- Bicilandia[37:84,]
-contrefactual$Binda_Residuals <- modelelogit$residuals[1:48]
-contrefactual$Guerra_Residuals <- modelelogit$residuals[49:96]
-contrefactual$Speicher_Residuals <- modelelogit$residuals[97:144]
+contrefactual <- Bicilandia[25:84,]
+contrefactual$Binda_Residuals <- modelelogit$residuals[25:84]
+contrefactual$Guerra_Residuals <- modelelogit$residuals[169:228]
+contrefactual$Speicher_Residuals <- modelelogit$residuals[313:372]
 alpha <- modelelogit$coefficients[[1]]
 mu <- -modelelogit$coefficients[[2]]
+inverse <- function(f,y) {
+  fonction_racine <- function(x) {
+    return(f(x)-y)
+  }
+  return(uniroot(fonction_racine,c(0.0000001,20))$root[1])
+}
 fmu <- function(x) {
   return(log(x)/mu + x)
 }
@@ -126,7 +130,7 @@ inverse1 <- function(f,y) {
   fonction_racine <- function(x) {
     return(f(x)-y)
   }
-  return(uniroot(fonction_racine,c(1e-8,1))$root[1])
+  return(uniroot(fonction_racine,c(1e-8,1-1e-11))$root[1])
 }
 inverse2 <- function(f,y) {
   fonction_racine <- function(x) {
@@ -154,7 +158,29 @@ for (i in (1:length(contrefactual$Month))) {
   s_Guerra[i] <- inverse_f_bertrand(alpha + log(s0[i]) + contrefactual$Guerra_Residuals[i]-mu*contrefactual$Guerra_Cost[i])
   s_Speicher[i] <- inverse_f_bertrand(alpha + log(s0[i]) + contrefactual$Speicher_Residuals[i]-mu*contrefactual$Speicher_Cost[i])
 }
-# g_bertrand <- function(s) {
-#   return(s + inverse_f_bertrand(alpha + log(s) + contrefactual$Binda_Residuals[1] - mu*contrefactual$Binda_Cost[1]) + inverse_f_bertrand(alpha + log(s) + contrefactual$Guerra_Residuals[1] - mu*contrefactual$Guerra_Cost[1]) + inverse_f_bertrand(alpha + log(s) + contrefactual$Speicher_Residuals[1] - mu*contrefactual$Speicher_Cost[1]))
-# }
-# inverse2(g_bertrand,1)
+g_bertrand <- function(s) {
+  return(s + inverse_f_bertrand(alpha + log(s) + contrefactual$Binda_Residuals[14] - mu*contrefactual$Binda_Cost[14]) + inverse_f_bertrand(alpha + log(s) + contrefactual$Guerra_Residuals[14] - mu*contrefactual$Guerra_Cost[14]) + inverse_f_bertrand(alpha + log(s) + contrefactual$Speicher_Residuals[14] - mu*contrefactual$Speicher_Cost[14]))
+}
+inverse2(g_bertrand,1)
+## Le modèle Bertrand donne des résultats extrêmes ###
+######################################################
+
+plot(Bicilandia$Month, Bicilandia$Binda_Volume , type = "l" , col = "Blue", ylab = "Volume", mar = c(0,0,0,0), main = "Volume Bicilandia with Counterfactual Cournot Model", ylim = c(10000,65000))
+lines(Bicilandia$Month, Bicilandia$Guerra_Volume, type = "l", col = "Green")
+lines(Bicilandia$Month, Bicilandia$Speicher_Volume, type = "l", col = "Brown")
+##
+legend("topright", legend=c("Binda", "Guerra","Speicher"),
+       col=c("Blue","Green","Brown"),lty = 1, cex=0.6)
+lines(contrefactual$Month,contrefactual$Binda_cf_Volumes, col = "blue", lty = 2)
+lines(contrefactual$Month,contrefactual$Guerra_cf_Volumes, col = "green", lty = 2)
+lines(contrefactual$Month,contrefactual$Speicher_cf_Volumes, col = "Red", lty = 2)
+##
+plot(Bicilandia$Month, Bicilandia$Binda_Price , type = "l" , col = "Blue",ylim = c(10,20), ylab = "Price", xlab = "", oma = c(0,0,0,0), main = "Price Bicilandia with counterfactual Cournot Model")
+lines(Bicilandia$Month, Bicilandia$Guerra_Price, type = "l", col = "Green")
+lines(Bicilandia$Month, Bicilandia$Speicher_Price, type = "l", col = "Brown")
+##
+legend("topright", legend=c("Binda", "Guerra","Speicher"),
+       col=c("Blue","Green","Brown"),lty = 1, cex=0.6)
+lines(contrefactual$Month,contrefactual$Binda_cf_Price, col = "blue", lty = 2)
+lines(contrefactual$Month,contrefactual$Guerra_cf_Price, col = "green", lty = 2)
+lines(contrefactual$Month,contrefactual$Speicher_cf_Price, col = "Red", lty = 2)
