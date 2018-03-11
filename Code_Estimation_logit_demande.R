@@ -31,7 +31,8 @@ Bicilandia$Guerra_Volume <- Bicilandia$Guerra_Turnover/ Bicilandia$Guerra_Price
 Bicilandia$Speicher_Volume <- Bicilandia$Speicher_Turnover / Bicilandia$Speicher_Price
 ##
 Bicilandia$Total_Volume <- Bicilandia$Binda_Volume + Bicilandia$Guerra_Volume + Bicilandia$Speicher_Volume
-Market_Size <- max(Bicilandia$Total_Volume) + 5
+##Market_Size <- max(Bicilandia$Total_Volume) + 5
+Market_Size <- 150000
 ##
 Bicilandia$Binda_Share <- Bicilandia$Binda_Volume/Market_Size
 Bicilandia$Guerra_Share <- Bicilandia$Guerra_Volume / Market_Size
@@ -84,17 +85,17 @@ inverse <- function(f,y) {
 ## On récupère maintenant les données observées sur la période de collusion
 ## On filtre sur la période avec collusion
 logitm <- rbind(logitBinda,logitGuerra,logitSpeicher)
-logitm <- subset(logitm, Month < ymd("2012-01-01"))
+logitm <- subset(logitm, Month < ymd("2012-07-01"))
 logitm <- subset(logitm, Month > ymd("2006-12-01"))
 ##
 library(AER)
 modelelogit <- ivreg(ln_Share ~ Price | Cost , data = logitm)
 summary(modelelogit)
 ## Construction du modèle contrefactuel
-contrefactual <- Bicilandia[25:84,]
-contrefactual$Binda_Residuals <- modelelogit$residuals[25:84]
-contrefactual$Guerra_Residuals <- modelelogit$residuals[169:228]
-contrefactual$Speicher_Residuals <- modelelogit$residuals[313:372]
+contrefactual <- Bicilandia[25:90,]
+contrefactual$Binda_Residuals <- modelelogit$residuals[1:66]
+contrefactual$Guerra_Residuals <- modelelogit$residuals[67:132]
+contrefactual$Speicher_Residuals <- modelelogit$residuals[133:198]
 alpha <- modelelogit$coefficients[[1]]
 mu <- -modelelogit$coefficients[[2]]
 inverse <- function(f,y) {
@@ -165,7 +166,7 @@ inverse2(g_bertrand,1)
 ## Le modèle Bertrand donne des résultats extrêmes ###
 ######################################################
 
-plot(Bicilandia$Month, Bicilandia$Binda_Volume , type = "l" , col = "Blue", ylab = "Volume", mar = c(0,0,0,0), main = "Volume Bicilandia with Counterfactual Cournot Model", ylim = c(10000,65000))
+plot(Bicilandia$Month, Bicilandia$Binda_Volume , type = "l" , col = "Blue", ylab = "Volume", mar = c(0,0,0,0), main = "Counterfactual Volumes with One-Model Approach", ylim = c(10000,65000))
 lines(Bicilandia$Month, Bicilandia$Guerra_Volume, type = "l", col = "Green")
 lines(Bicilandia$Month, Bicilandia$Speicher_Volume, type = "l", col = "Brown")
 ##
@@ -175,7 +176,7 @@ lines(contrefactual$Month,contrefactual$Binda_cf_Volumes, col = "blue", lty = 2)
 lines(contrefactual$Month,contrefactual$Guerra_cf_Volumes, col = "green", lty = 2)
 lines(contrefactual$Month,contrefactual$Speicher_cf_Volumes, col = "Red", lty = 2)
 ##
-plot(Bicilandia$Month, Bicilandia$Binda_Price , type = "l" , col = "Blue",ylim = c(10,20), ylab = "Price", xlab = "", oma = c(0,0,0,0), main = "Price Bicilandia with counterfactual Cournot Model")
+plot(Bicilandia$Month, Bicilandia$Binda_Price , type = "l" , col = "Blue",ylim = c(10,20), ylab = "Price", xlab = "", oma = c(0,0,0,0), main = "Counterfactual Prices with One-Model Approach")
 lines(Bicilandia$Month, Bicilandia$Guerra_Price, type = "l", col = "Green")
 lines(Bicilandia$Month, Bicilandia$Speicher_Price, type = "l", col = "Brown")
 ##
@@ -184,3 +185,178 @@ legend("topright", legend=c("Binda", "Guerra","Speicher"),
 lines(contrefactual$Month,contrefactual$Binda_cf_Price, col = "blue", lty = 2)
 lines(contrefactual$Month,contrefactual$Guerra_cf_Price, col = "green", lty = 2)
 lines(contrefactual$Month,contrefactual$Speicher_cf_Price, col = "Red", lty = 2)
+##
+############################################################
+## Calcul des dommages-intérêts                   ##########
+# r : taux d'intérêt annuel sur la période de collusion.  ##
+Aujourdhui <- ymd("2017-01-01")
+
+
+Damages_paidunits_Binda <- function(r) {
+  return(sum((contrefactual$Binda_Price - contrefactual$Binda_cf_Price)*contrefactual$Binda_Volume*((1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))))
+}
+Damages_paidunits_Guerra <- function(r) {
+  return(sum((contrefactual$Guerra_Price - contrefactual$Guerra_cf_Price)*contrefactual$Guerra_Volume*((1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))))
+}
+Damages_paidunits_Binda(0.015)
+Damages_paidunits_Guerra(0.015)
+Profits_Binda <- function(r) {
+  sum((contrefactual$Binda_Price-contrefactual$Binda_Cost)*contrefactual$Binda_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Profits_Binda(0.015)
+
+Harm_Binda <- function(r) {
+  sum((contrefactual$Binda_cf_Volumes - contrefactual$Binda_Volume)*contrefactual$Binda_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Harm_Binda(0.015)
+Harm_Guerra <- function(r) {
+  sum((contrefactual$Guerra_cf_Volumes - contrefactual$Guerra_Volume)*contrefactual$Guerra_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Profits_Guerra <- function(r) {
+  sum((contrefactual$Guerra_Price-contrefactual$Guerra_Cost)*contrefactual$Guerra_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Profits_Guerra(0.015)
+
+Cf_Profits_Binda <- function(r) {
+  sum((contrefactual$Binda_cf_Price - contrefactual$Binda_Cost)*contrefactual$Binda_cf_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Cf_Profits_Binda(0.015)
+
+Cf_Profits_Guerra <- function(r) {
+  sum((contrefactual$Guerra_cf_Price - contrefactual$Guerra_Cost)*contrefactual$Guerra_cf_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Cf_Profits_Guerra(0.015)
+
+Harm_Speicher <- function(r) {
+  sum((contrefactual$Speicher_cf_Volumes - contrefactual$Speicher_Volume)*contrefactual$Speicher_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual$Month)/365))
+}
+Harm_Speicher(0.015)
+##########
+## Modèle personnalisé de demande
+logit_Bindam <- subset(logitBinda, Month < ymd("2012-07-01"))
+logit_Bindam <- subset(logit_Bindam, Month > ymd("2006-12-01"))
+modelelogit_Bindam <- ivreg(ln_Share ~ Price | Cost , data = logit_Bindam)
+summary(modelelogit_Bindam)
+logit_Guerram <- subset(logitGuerra, Month < ymd("2012-07-01"))
+logit_Guerram <- subset(logit_Guerram, Month > ymd("2006-12-01"))
+modelelogit_Guerram <- ivreg(ln_Share ~ Price | Cost , data = logit_Guerram)
+summary(modelelogit_Guerram)
+logit_Speicherm <- subset(logitSpeicher, Month < ymd("2012-07-01"))
+logit_Speicherm <- subset(logit_Speicherm, Month > ymd("2006-12-01"))
+modelelogit_Speicherm <- ivreg(ln_Share ~ Price | Cost , data = logit_Speicherm)
+summary(modelelogit_Speicherm)
+##
+contrefactual_differencie <- Bicilandia[25:90,]
+contrefactual_differencie$Binda_Residuals <- modelelogit_Bindam$residuals[1:66]
+contrefactual_differencie$Guerra_Residuals <- modelelogit_Guerram$residuals[1:66]
+contrefactual_differencie$Speicher_Residuals <- modelelogit_Speicherm$residuals[1:66]
+
+alpha_Binda <- modelelogit_Bindam$coefficients[[1]]
+mu_Binda <- -modelelogit_Bindam$coefficients[[2]]
+alpha_Guerra <- modelelogit_Guerram$coefficients[[1]]
+mu_Guerra <- -modelelogit_Guerram$coefficients[[2]]
+alpha_Speicher <- modelelogit_Speicherm$coefficients[[1]]
+mu_Speicher <- -modelelogit_Speicherm$coefficients[[2]]
+
+inverse <- function(f,y) {
+  fonction_racine <- function(x) {
+    return(f(x)-y)
+  }
+  return(uniroot(fonction_racine,c(0.0000001,30))$root[1])
+}
+fmu_Binda <- function(x) {
+  return(log(x)/mu_Binda + x)
+}
+gmu_Binda <- function(y) {
+  return(inverse(fmu_Binda,y))
+}
+fmu_Guerra <- function(x) {
+  return(log(x)/mu_Guerra + x)
+}
+gmu_Guerra <- function(y) {
+  return(inverse(fmu_Guerra,y))
+}
+fmu_Speicher <- function(x) {
+  return(log(x)/mu_Speicher + x)
+}
+gmu_Speicher <- function(y) {
+  return(inverse(fmu_Speicher,y))
+}
+for (i in 1:length(contrefactual_differencie$Binda_Price)) {
+  contrefactual_differencie$Binda_cf_Volumes[i] <- Market_Size*gmu_Binda((alpha_Binda+contrefactual_differencie$Binda_Residuals[i])/mu_Binda - 1 - contrefactual_differencie$Binda_Cost[i])/(1+gmu_Binda((alpha_Binda+contrefactual_differencie$Binda_Residuals[i])/mu_Binda - 1 - contrefactual_differencie$Binda_Cost[i]) + gmu_Guerra((alpha_Guerra+contrefactual_differencie$Guerra_Residuals[i])/mu_Guerra - 1 - contrefactual_differencie$Guerra_Cost[i])+gmu_Speicher((alpha_Speicher+contrefactual_differencie$Speicher_Residuals[i])/mu_Speicher - 1 - contrefactual_differencie$Speicher_Cost[i]))
+}
+for (i in 1:length(contrefactual_differencie$Binda_Price)) {
+  contrefactual_differencie$Guerra_cf_Volumes[i] <- Market_Size*gmu_Guerra((alpha_Guerra+contrefactual_differencie$Guerra_Residuals[i])/mu_Guerra - 1 - contrefactual_differencie$Guerra_Cost[i])/(1+gmu_Binda((alpha_Binda+contrefactual_differencie$Binda_Residuals[i])/mu_Binda - 1 - contrefactual_differencie$Binda_Cost[i]) + gmu_Guerra((alpha_Guerra+contrefactual_differencie$Guerra_Residuals[i])/mu_Guerra - 1 - contrefactual_differencie$Guerra_Cost[i])+gmu_Speicher((alpha_Speicher+contrefactual_differencie$Speicher_Residuals[i])/mu_Speicher - 1 - contrefactual_differencie$Speicher_Cost[i]))
+}
+for (i in 1:length(contrefactual_differencie$Binda_Price)) {
+  contrefactual_differencie$Speicher_cf_Volumes[i] <- Market_Size*gmu_Speicher((alpha_Speicher+contrefactual_differencie$Speicher_Residuals[i])/mu_Speicher - 1 - contrefactual_differencie$Speicher_Cost[i])/(1+gmu_Binda((alpha_Binda+contrefactual_differencie$Binda_Residuals[i])/mu_Binda - 1 - contrefactual_differencie$Binda_Cost[i]) + gmu_Guerra((alpha_Guerra+contrefactual_differencie$Guerra_Residuals[i])/mu_Guerra - 1 - contrefactual_differencie$Guerra_Cost[i])+gmu_Speicher((alpha_Speicher+contrefactual_differencie$Speicher_Residuals[i])/mu_Speicher - 1 - contrefactual_differencie$Speicher_Cost[i]))
+}
+contrefactual_differencie_differencie$Binda_cf_Price <- contrefactual_differencie_differencie$Binda_Cost + 1 - contrefactual_differencie_differencie$Binda_cf_Volumes/(contrefactual_differencie_differencie$Binda_cf_Volumes + contrefactual_differencie_differencie$Guerra_cf_Volumes + contrefactual_differencie_differencie$Speicher_cf_Volumes - Market_Size)
+contrefactual_differencie_differencie$Guerra_cf_Price <- contrefactual_differencie_differencie$Guerra_Cost + 1 - contrefactual_differencie_differencie$Guerra_cf_Volumes/(contrefactual_differencie_differencie$Binda_cf_Volumes + contrefactual_differencie_differencie$Guerra_cf_Volumes + contrefactual_differencie_differencie$Speicher_cf_Volumes - Market_Size)
+contrefactual_differencie_differencie$Speicher_cf_Price <- contrefactual_differencie_differencie$Speicher_Cost + 1 - contrefactual_differencie_differencie$Speicher_cf_Volumes/(contrefactual_differencie_differencie$Binda_cf_Volumes + contrefactual_differencie_differencie$Guerra_cf_Volumes + contrefactual_differencie_differencie$Speicher_cf_Volumes - Market_Size)
+
+plot(Bicilandia$Month, Bicilandia$Binda_Volume , type = "l" , col = "Blue", ylab = "Volume", mar = c(0,0,0,0), main = "Counterfactual Volumes with One-Model Approach and Differentiated Demand Functions",cex.main = 0.95, ylim = c(10000,65000))
+lines(Bicilandia$Month, Bicilandia$Guerra_Volume, type = "l", col = "Green")
+lines(Bicilandia$Month, Bicilandia$Speicher_Volume, type = "l", col = "Brown")
+##
+legend("topright", legend=c("Binda", "Guerra","Speicher"),
+       col=c("Blue","Green","Brown"),lty = 1, cex=0.6)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Binda_cf_Volumes, col = "blue", lty = 2)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Guerra_cf_Volumes, col = "green", lty = 2)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Speicher_cf_Volumes, col = "Red", lty = 2)
+##
+plot(Bicilandia$Month, Bicilandia$Binda_Price , type = "l" , col = "Blue",ylim = c(10,20), ylab = "Price", xlab = "", oma = c(0,0,0,0), main = "Counterfactual Prices with One-Model Approach and Differentiated Demand Functions", cex.main = 0.95)
+lines(Bicilandia$Month, Bicilandia$Guerra_Price, type = "l", col = "Green")
+lines(Bicilandia$Month, Bicilandia$Speicher_Price, type = "l", col = "Brown")
+##
+legend("topright", legend=c("Binda", "Guerra","Speicher"),
+       col=c("Blue","Green","Brown"),lty = 1, cex=0.6)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Binda_cf_Price, col = "blue", lty = 2)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Guerra_cf_Price, col = "green", lty = 2)
+lines(contrefactual_differencie$Month,contrefactual_differencie$Speicher_cf_Price, col = "Red", lty = 2)
+
+######################################################################
+## Calcul des dommages-intérêts modèle différencié par marque ##########
+# r : taux d'intérêt annuel sur la période de collusion.  ##
+Aujourdhui <- ymd("2017-01-01")
+
+
+Damages_paidunits_Binda <- function(r) {
+  return(sum((contrefactual_differencie$Binda_Price - contrefactual_differencie$Binda_cf_Price)*contrefactual_differencie$Binda_Volume*((1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))))
+}
+Damages_paidunits_Guerra <- function(r) {
+  return(sum((contrefactual_differencie$Guerra_Price - contrefactual_differencie$Guerra_cf_Price)*contrefactual_differencie$Guerra_Volume*((1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))))
+}
+Damages_paidunits_Binda(0.015)
+Damages_paidunits_Guerra(0.015)
+Profits_Binda <- function(r) {
+  sum((contrefactual_differencie$Binda_Price-contrefactual_differencie$Binda_Cost)*contrefactual_differencie$Binda_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Profits_Binda(0.015)
+
+Harm_Binda <- function(r) {
+  sum((contrefactual_differencie$Binda_cf_Volumes - contrefactual_differencie$Binda_Volume)*contrefactual_differencie$Binda_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Harm_Binda(0.015)
+Harm_Guerra <- function(r) {
+  sum((contrefactual_differencie$Guerra_cf_Volumes - contrefactual_differencie$Guerra_Volume)*contrefactual_differencie$Guerra_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Profits_Guerra <- function(r) {
+  sum((contrefactual_differencie$Guerra_Price-contrefactual_differencie$Guerra_Cost)*contrefactual_differencie$Guerra_Volume*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Profits_Guerra(0.015)
+
+Cf_Profits_Binda <- function(r) {
+  sum((contrefactual_differencie$Binda_cf_Price - contrefactual_differencie$Binda_Cost)*contrefactual_differencie$Binda_cf_Volumes*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Cf_Profits_Binda(0.015)
+
+Cf_Profits_Guerra <- function(r) {
+  sum((contrefactual_differencie$Guerra_cf_Price - contrefactual_differencie$Guerra_Cost)*contrefactual_differencie$Guerra_cf_Volumes*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Cf_Profits_Guerra(0.015)
+
+Harm_Speicher <- function(r) {
+  sum((contrefactual_differencie$Speicher_cf_Volumes - contrefactual_differencie$Speicher_Volume)*contrefactual_differencie$Speicher_cf_Price*(1+r)^(as.numeric(Aujourdhui-contrefactual_differencie$Month)/365))
+}
+Harm_Speicher(0.015)
