@@ -66,9 +66,9 @@ Bicilandia$collusion <- ifelse( ymd("2006-12-01") < Bicilandia$Month & Bicilandi
 
 Bicilandia$Cartel_Price = (Bicilandia$Binda_Price + Bicilandia$Guerra_Price) / 2
 Bicilandia$Cartel_Cost = (Bicilandia$Binda_Cost + Bicilandia$Guerra_Cost) / 2
-Bicilandia$Cartel_Turnover = (Bicilandia$Binda_Turnover + Bicilandia$Guerra_Turnover) / 2
+Bicilandia$Cartel_Turnover = (Bicilandia$Binda_Turnover + Bicilandia$Guerra_Turnover)
 
-Bicilandia$Cartel_Quantity = (Bicilandia$Binda_Quantity + Bicilandia$Guerra_Quantity) / 2
+Bicilandia$Cartel_Quantity = (Bicilandia$Binda_Quantity + Bicilandia$Guerra_Quantity)
 
 # Création table Cartel
 Cartel = Bicilandia[,c("Month", "collusion", "Cartel_Price", "Cartel_Cost" ,"Cartel_Turnover", "Cartel_Quantity")]
@@ -99,15 +99,33 @@ lines(Bicilandia$Month, Bicilandia$Cartel_Price, type = "l", col = "Green")
 lines(Bicilandia$Month, Bicilandia$CounterSpeicherPrice, type = "l", col = "Red")
 lines(Bicilandia$Month, Bicilandia$Speicher_Price, type = "l", col = "Brown")
 
-# Calcul du dommage Model 1
 
-Dommage1A = sqldf("select sum((Cartel_Price - CounterCartelPrice1)*Cartel_Quantity*collusion)
+# Taux d'intérêt : discount rate
+r=1.015
+
+Bicilandia$interet = r^(144-as.numeric(as.character(rownames(Bicilandia))))
+
+# Calcul du dommage pour excès de prix payé Model 1
+
+Dommage1A = sqldf("select sum((Cartel_Price - CounterCartelPrice1) * Cartel_Quantity * collusion)
 from Bicilandia")
 
-Dommage1B = sqldf("select sum((Speicher_Price - CounterSpeicherPrice)*Speicher_Quantity*collusion)
+Dommage1B = sqldf("select sum((Speicher_Price - CounterSpeicherPrice) * Speicher_Quantity * collusion)
 from Bicilandia")
 
 Dommage1AB = Dommage1A + Dommage1B
+
+
+Dommage1A = sqldf("select sum((Cartel_Price - CounterCartelPrice1) * Cartel_Quantity * collusion * interet)
+from Bicilandia")
+
+Dommage1B = sqldf("select sum((Speicher_Price - CounterSpeicherPrice) * Speicher_Quantity * collusion  * interet)
+from Bicilandia")
+
+Dommage1AB = Dommage1A + Dommage1B
+
+
+######### QUANTITY ############
 
 # Modèle Dif In Dif avec groupe de contrôle Before-After : Avant et Après VS Periode de collusion et Cross-sectional  : Speicher
 DifInDifQty1 <- lm(Quantity ~ Cost + collusion + Cartel + collusion * Cartel , data = BicilandiaDataModel1)
@@ -118,13 +136,43 @@ Bicilandia$CounterCartelQuantity1 = DifInDifQty1$coefficients[1] + DifInDifQty1$
 Bicilandia$CounterSpeicherQuantity = DifInDifQty1$coefficients[1] + DifInDifQty1$coefficients[2]*Bicilandia$Speicher_Cost
 
 # Sortie graphique
-plot(Bicilandia$Month, Bicilandia$CounterCartelQuantity1 , type = "l" , col = "Blue", ylab = "Price", mar = c(0,0,0,0), main = "Quantity Bicilandia ", ylim = c(20000,70000))
+plot(Bicilandia$Month, Bicilandia$CounterCartelQuantity1 , type = "l" , col = "Blue", ylab = "Price", mar = c(0,0,0,0), main = "Quantity Bicilandia ", ylim = c(20000,140000))
 #lines(Bicilandia$Month, Bicilandia$CounterCartelPrice0, type = "l", col = "Green")
 lines(Bicilandia$Month, Bicilandia$Cartel_Quantity, type = "l", col = "Green")
 lines(Bicilandia$Month, Bicilandia$CounterSpeicherQuantity, type = "l", col = "Red")
 lines(Bicilandia$Month, Bicilandia$Speicher_Quantity, type = "l", col = "Brown")
 
 
+# Calcul du dommage pour perte de volume Model 1 san intéret
+
+Volume1Factual = sqldf("select sum(Cartel_Quantity * collusion)
+from Bicilandia")
+
+Volume1A = sqldf("select sum((CounterCartelQuantity1 - Cartel_Quantity)* collusion)
+from Bicilandia")
+
+Dommage1A_V = sqldf("select sum((CounterCartelQuantity1 - Cartel_Quantity) * (Cartel_Price -  CounterCartelPrice1) * collusion)/2
+from Bicilandia")
+
+
+Volume1B = sqldf("select sum((Speicher_Quantity - CounterSpeicherQuantity))
+from Bicilandia")
+
+Dommage1B_V = sqldf("select sum((Speicher_Quantity - CounterSpeicherQuantity) * (Speicher_Price - CounterSpeicherPrice) * collusion)
+from Bicilandia")
+
+Dommage1AB = Dommage1A + Dommage1B
+
+
+# Calcul du dommage pour perte de volume Model 1 avec intérêt
+
+Dommage1A_V = sqldf("select sum((CounterCartelQuantity1 - Cartel_Quantity) * (Cartel_Price -  CounterCartelPrice1) * collusion * interet)
+from Bicilandia")
+
+Dommage1B_V = sqldf("select sum((Speicher_Quantity - CounterSpeicherQuantity) * (Speicher_Price - CounterSpeicherPrice)* collusion  * interet)
+from Bicilandia")
+
+Dommage1AB = Dommage1A + Dommage1B
 
 #######################################################
 ##### Dif In Dif 2 avec Cross-Sectional : Flandria ####
@@ -175,13 +223,16 @@ plot(Bicilandia$Month, Bicilandia$CounterCartelPrice2 , type = "l" , col = "Blue
 lines(Bicilandia$Month, Bicilandia$CounterCartelPrice1, type = "l", col = "Red")
 lines(Bicilandia$Month, Bicilandia$Cartel_Price, type = "l", col = "Green")
 
-# Calcul du dommage Model 2
+# Calcul du dommage Overcharge Model 2
 
-Dommage2A = sqldf("select sum((Cartel_Price - CounterCartelPrice2)*Cartel_Quantity*collusion)
+Dommage2A = sqldf("select sum((Cartel_Price - CounterCartelPrice2) * Cartel_Quantity * collusion * interet)
 from Bicilandia")
 
 
 Dommage2AB = Dommage2A + Dommage1B
+
+
+
 
 # Modèle Dif In Dif avec groupe de contrôle Before-After : Avant et Après VS Periode de collusion et Cross-sectional  : Speicher
 DifInDifQty2 <- lm(Quantity ~ Cost + collusion + Bicilinda + collusion * Bicilinda, data = BicilandiaDataModel2)
@@ -206,10 +257,21 @@ lines(Bicilandia$Month, Bicilandia$CounterCartelQuantity1, type = "l", col = "Re
 lines(Bicilandia$Month, Bicilandia$Cartel_Quantity, type = "l", col = "Green")
 
 
+# Calcul du dommage Lost Volume Model 2
 
 
+Volume2A = sqldf("select sum((CounterCartelQuantity2 - Cartel_Quantity))
+from Bicilandia")
+
+Dommage2A = sqldf("select sum((CounterCartelQuantity2 - Cartel_Quantity) * (Cartel_Price - CounterCartelPrice2) * collusion)/2
+from Bicilandia")
 
 
+Dommage2AB = Dommage2A + Dommage1B
+
+
+Dommage2A = sqldf("select sum((CounterCartelQuantity2 - Cartel_Quantity) * (Cartel_Price - CounterCartelPrice2) * collusion * interet)
+from Bicilandia")
 
 
 
