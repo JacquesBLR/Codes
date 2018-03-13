@@ -68,11 +68,11 @@ Aujourdhui <- ymd("2017-01-01")
 Damages_paidunits_Binda <- function(r) {
   sum((Collusion$Binda_Price - Collusion$Cartel_cf_Cournot_Price)*Collusion$Binda_Volume*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
 }
-Damages_paidunits_Binda(0.015)
+Damages_paidunits_Binda(0.0)
 Damages_paidunits_Guerra <- function(r) {
   sum((Collusion$Guerra_Price - Collusion$Cartel_cf_Cournot_Price)*Collusion$Guerra_Volume*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
 }
-Damages_paidunits_Guerra(0.015)
+Damages_paidunits_Guerra(0.0)
 
 Profits_Binda <- function(r) {
   sum((Collusion$Binda_Price-Collusion$Binda_Cost)*Collusion$Binda_Volume*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
@@ -80,13 +80,13 @@ Profits_Binda <- function(r) {
 Profits_Binda(0.015)
 
 Harm_Binda <- function(r) {
-  sum((Collusion$Cartel_cf_Cournot_Volume - Collusion$Binda_Volume)*Collusion$Cartel_cf_Cournot_Price*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
+  sum((Collusion$Cartel_cf_Cournot_Volume - Collusion$Binda_Volume)*(Collusion$Binda_Price-Collusion$Cartel_cf_Cournot_Price)*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
 }
-Harm_Binda(0.015)
+Harm_Binda(0.0)
 Harm_Guerra <- function(r) {
-  sum((Collusion$Cartel_cf_Cournot_Volume - Collusion$Guerra_Volume)*Collusion$Cartel_cf_Cournot_Price*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
+  sum((Collusion$Cartel_cf_Cournot_Volume - Collusion$Guerra_Volume)*(Collusion$Cartel_Price-Collusion$Cartel_cf_Cournot_Price)*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
 }
-Harm_Guerra(0.015)
+Harm_Guerra(0.0)
 Profits_Guerra <- function(r) {
   sum((Collusion$Guerra_Price-Collusion$Guerra_Cost)*Collusion$Guerra_Volume*(1+r)^(as.numeric(Aujourdhui-Collusion$Month)/365))
 }
